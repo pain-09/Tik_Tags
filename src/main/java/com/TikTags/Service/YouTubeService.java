@@ -3,6 +3,7 @@ package com.TikTags.Service;
 
 import com.TikTags.Model.SearchVideo;
 import com.TikTags.Model.Video;
+import com.TikTags.Model.VideoDetails;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -74,6 +75,7 @@ public class YouTubeService {
                .retrieve()
                .bodyToMono(VideoApiResponse.class)
                .block();
+
        if(response==null || response.items==null){
            return null;
        }
@@ -117,11 +119,39 @@ public class YouTubeService {
         return videoIds;
     }
 
+    public VideoDetails getVideoDetails(String videoId) {
+        VideoApiResponse response=webClientBuilder.baseUrl(baseUrl).build()
+                .get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/videos")
+                        .queryParam("part", "snippet")
+                        .queryParam("id",videoId)
+                        .queryParam("key",apiKey)
+                        .build())
+                .retrieve()
+                .bodyToMono(VideoApiResponse.class)
+                .block();
+
+        if(response==null || response.items==null){
+            return null;
+        }
+
+        Snippet snippet=response.items.get(0).snippet;
+        String thumbnailurl= snippet.thumbnails.getBestThumbnailUrl();
+
+        return VideoDetails.builder()
+                .id(videoId)
+                .title(snippet.title)
+                .description(snippet.description)
+                .tags(snippet.tags==null ? Collections.emptyList() :snippet.tags)
+                .thumbnailUrl(thumbnailurl)
+                .channelTitle(snippet.channelTitle)
+                .publishedAt(snippet.publishedAt)
+                .build();
+    }
 
 
-
-
-//    DTO
+    //    DTO
     @Data
     static class SearchApiResponse{
         List<SearchItem> items;
